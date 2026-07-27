@@ -11,37 +11,25 @@ permissions:
   actions: write
 
 jobs:
-  validate-version:
+  build-and-push-images:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate versions
+      - name: Update project versions to match release tag
         run: |
-          BACKEND_VERSION=$(grep '^version =' backend/pyproject.toml | head -n 1 | awk -F'"' '{print $2}')
-          echo "Backend version: ${BACKEND_VERSION}"
-          
           if [[ "${{ github.event_name }}" == "release" ]]; then
             RELEASE_VERSION="${{ github.event.release.tag_name }}"
             RELEASE_VERSION="${RELEASE_VERSION#v}"
-            echo "Release version: ${RELEASE_VERSION}"
+            echo "Auto-injecting release version: ${RELEASE_VERSION}"
             
-            if [[ "${BACKEND_VERSION}" != "${RELEASE_VERSION}" ]]; then
-              echo "ERROR: Backend version (${BACKEND_VERSION}) does not match the GitHub Release tag version (${RELEASE_VERSION})!"
-              exit 1
-            fi
-            echo "SUCCESS: Backend version matches release version!"
-          else
-            echo "Skipping validation: not triggered by a release event"
+            # Update backend/pyproject.toml
+            sed -i "s/^version = \".*\"/version = \"${RELEASE_VERSION}\"/" backend/pyproject.toml
+            
+            # Update frontend/package.json
+            sed -i "s/\"version\": \".*\"/\"version\": \"${RELEASE_VERSION}\"/" frontend/package.json
           fi
-
-  build-and-push-images:
-    needs: validate-version
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
 
       - name: Lowercase repository owner
         id: owner
@@ -125,7 +113,7 @@ jobs:
             });
 
   publish-success:
-    needs: [validate-version, build-and-push-images]
+    needs: [build-and-push-images]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -164,7 +152,7 @@ jobs:
           echo "=================================================="
 
   cleanup-on-failure:
-    needs: [validate-version, build-and-push-images]
+    needs: [build-and-push-images]
     if: always() && (contains(needs.build-and-push-images.result, 'failure') || contains(needs.build-and-push-images.result, 'cancelled'))
     runs-on: ubuntu-latest
     steps:
