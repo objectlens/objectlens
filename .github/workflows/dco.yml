@@ -54,7 +54,7 @@ jobs:
           
           if [ "$failed" -ne 0 ]; then
             echo "❌ DCO Check Failed! Please sign-off all your commits."
-            echo "   You can sign-off your last commit using: git commit --amend --signoff"
+            echo "   See our Contribution Guide on how to fix this: https://github.com/objectlens/objectlens/blob/main/CONTRIBUTING.md#developer-certificate-of-origin-dco"
             exit 1
           fi
           

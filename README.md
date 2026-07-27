@@ -57,3 +57,9 @@ This starts:
 - **Frontend UI**: `http://localhost:3000`
 - **Backend API**: `http://localhost:8000`
 - **MinIO Console**: `http://localhost:9001` (login with `minioadmin` / `minioadmin`)
+
+---
+
+## Contributing
+
+We welcome contributions of all types. Before submitting a pull request, please review our [Contributing Guide](CONTRIBUTING.md) for information on coding standards, testing, and our Developer Certificate of Origin (DCO) sign-off requirement.

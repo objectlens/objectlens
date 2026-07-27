@@ -95,3 +95,4 @@ just test          # Run backend unit and integration tests
   ```bash
   git commit -s -m "Your commit message"
   ```
+- **Fixing Unsigned Commits**: If you need to sign off previously created or pushed commits, see the [Contributing Guide](CONTRIBUTING.md#developer-certificate-of-origin-dco) for instructions on using `git commit --amend` or `git rebase --signoff`.
