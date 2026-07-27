@@ -7,9 +7,6 @@ on:
     paths:
       - 'backend/**'
       - 'frontend/**'
-      - 'chart/**'
-      - 'docs/**'
-      - 'mkdocs.yml'
   workflow_dispatch:
 
 permissions:
@@ -22,8 +19,6 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
-      chart: ${{ steps.filter.outputs.chart }}
-      docs: ${{ steps.filter.outputs.docs }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -37,71 +32,6 @@ jobs:
               - 'backend/**'
             frontend:
               - 'frontend/**'
-            chart:
-              - 'chart/**'
-            docs:
-              - 'docs/**'
-              - 'mkdocs.yml'
-
-  validate-chart-version:
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.chart == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Verify Chart version is bumped
-        run: |
-          PR_VERSION=$(grep '^version:' chart/Chart.yaml | awk '{print $2}')
-          PR_APP_VERSION=$(grep '^appVersion:' chart/Chart.yaml | awk '{print $2}' | tr -d '"')
-          
-          git fetch origin main --depth=1
-          git show origin/main:chart/Chart.yaml > /tmp/Chart-main.yaml
-          
-          MAIN_VERSION=$(grep '^version:' /tmp/Chart-main.yaml | awk '{print $2}')
-          MAIN_APP_VERSION=$(grep '^appVersion:' /tmp/Chart-main.yaml | awk '{print $2}' | tr -d '"')
-          
-          echo "PR Chart Version:   ${PR_VERSION}"
-          echo "PR App Version:     ${PR_APP_VERSION}"
-          echo "Main Chart Version: ${MAIN_VERSION}"
-          echo "Main App Version:   ${MAIN_APP_VERSION}"
-          
-          # We only fail if chart/Chart.yaml version is identical to main
-          if [[ "${PR_VERSION}" == "${MAIN_VERSION}" ]]; then
-            echo "ERROR: Helm chart version (${PR_VERSION}) has not been bumped and is identical to main!"
-            exit 1
-          fi
-          
-          if [[ "${PR_APP_VERSION}" == "${MAIN_APP_VERSION}" ]]; then
-            echo "INFO: appVersion (${PR_APP_VERSION}) is identical to main (this is allowed)."
-          fi
-          
-          echo "SUCCESS: Chart version validation passed!"
-
-  validate-docs:
-    needs: detect-changes
-    if: ${{ needs.detect-changes.outputs.docs == 'true' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install mkdocs-material
-
-      - name: Run Strict Docs Build
-        run: |
-          mkdocs build --strict
 
   test:
     needs: detect-changes

@@ -8,7 +8,7 @@ Welcome, AI Agent. This document outlines the architecture, coding standards, an
 
 - **Backend**: Python 12/FastAPI, SQLAlchemy, SQLite (`objectlens.db` via SQLAlchemy).
 - **Frontend**: Nuxt 4 (Vue 3 with TypeScript), Lucide icons, Vanilla CSS.
-- **Infrastructure**: Local development via Devbox, containerization via Docker Compose, deployment via Helm and Kubernetes.
+- **Infrastructure**: Local development via Devbox, containerization via Docker Compose.
 
 ---
 
@@ -37,7 +37,6 @@ When making modifications in this repository, assume these expert professional r
 - `/frontend` - Nuxt 4 application.
   - `/frontend/app/composables` - Shared API client, upload queue state, and metadata structures.
   - `/frontend/app/pages` - Routing pages (Vue 3 with `<script setup lang="ts">`).
-- `/chart` - Deployment Helm chart.
 - `justfile` - Common tasks and developer commands.
 
 ---
@@ -87,9 +86,6 @@ just test          # Run backend unit and integration tests
 - **Composition API**: Build components using `<script setup lang="ts">`.
 - **Composables**: Keep state out of single page files if shared. Put shared queueing or API state in `/frontend/app/composables/`.
 
-### 3. Deployments & Kubernetes
-- **Helm Over Manifests**: Make any infrastructure changes in `chart/` (templates or `values.yaml`). Do not create loose Kubernetes YAML manifests.
-
-### 4. Writing Prose & Comments
+### 3. Writing Prose & Comments
 - **No Filler**: Write direct, human-like, non-slop documentation. State what the code does or why a change was made without preambles or generic boilerplate.
 - **Maintain the README Features List**: Always add new features to the features list in `README.md` when implementing them, or update them when modified. This ensures developers and users can easily see the software's capabilities and stay informed about additions or changes.

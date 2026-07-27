@@ -19,19 +19,19 @@ jobs:
 
       - name: Validate versions
         run: |
-          CHART_VERSION=$(grep '^version:' chart/Chart.yaml | awk '{print $2}')
-          echo "Chart version: ${CHART_VERSION}"
+          BACKEND_VERSION=$(grep '^version =' backend/pyproject.toml | head -n 1 | awk -F'"' '{print $2}')
+          echo "Backend version: ${BACKEND_VERSION}"
           
           if [[ "${{ github.event_name }}" == "release" ]]; then
             RELEASE_VERSION="${{ github.event.release.tag_name }}"
             RELEASE_VERSION="${RELEASE_VERSION#v}"
             echo "Release version: ${RELEASE_VERSION}"
             
-            if [[ "${CHART_VERSION}" != "${RELEASE_VERSION}" ]]; then
-              echo "ERROR: Helm chart version (${CHART_VERSION}) does not match the GitHub Release tag version (${RELEASE_VERSION})!"
+            if [[ "${BACKEND_VERSION}" != "${RELEASE_VERSION}" ]]; then
+              echo "ERROR: Backend version (${BACKEND_VERSION}) does not match the GitHub Release tag version (${RELEASE_VERSION})!"
               exit 1
             fi
-            echo "SUCCESS: Helm chart version matches release version!"
+            echo "SUCCESS: Backend version matches release version!"
           else
             echo "Skipping validation: not triggered by a release event"
           fi
@@ -113,92 +113,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Extract metadata for mcp-server
-        id: meta-mcp
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ steps.owner.outputs.name }}/objectlens/mcp-server
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ github.event_name == 'release' }}
-            type=sha,format=short
-
-      - name: Build and push MCP Server image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./mcp-server
-          file: ./mcp-server/Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta-mcp.outputs.tags }}
-          labels: ${{ steps.meta-mcp.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Cancel Workflow on Failure
-        if: failure()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.actions.cancelWorkflowRun({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              run_id: context.runId
-            });
-
-  build-and-push-chart:
-    needs: validate-version
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Lowercase repository owner
-        id: owner
-        run: |
-          echo "name=${OWNER,,}" >> $GITHUB_OUTPUT
-        env:
-          OWNER: ${{ github.repository_owner }}
-
-      - name: Set up Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: 'v3.14.0'
-
-      - name: Log in to GHCR for Helm
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
-
-      - name: Calculate chart version
-        id: version
-        run: |
-          if [[ "${{ github.ref_type }}" == "tag" ]]; then
-            # Use git tag stripped of leading 'v'
-            VERSION="${GITHUB_REF_NAME#v}"
-          else
-            # Use base version from Chart.yaml and append -dev.<run_number>
-            BASE_VERSION=$(grep '^version:' chart/Chart.yaml | awk '{print $2}')
-            VERSION="${BASE_VERSION}-dev.${{ github.run_number }}"
-          fi
-          echo "value=${VERSION}" >> $GITHUB_OUTPUT
-
-      - name: Package and Push Helm Chart
-        run: |
-          # Dynamically modify name inside Chart.yaml just for the package step
-          sed -i 's/^name: .*/name: helm-chart/' chart/Chart.yaml
-          
-          CHART_NAME="helm-chart"
-          echo "Packaging under Name: ${CHART_NAME}"
-          
-          # Package the chart
-          helm package chart/ --version "${{ steps.version.outputs.value }}" --destination .
-          
-          # Push the generated package
-          helm push "${CHART_NAME}-${{ steps.version.outputs.value }}.tgz" "oci://ghcr.io/${{ steps.owner.outputs.name }}/objectlens"
-
       - name: Cancel Workflow on Failure
         if: failure()
         uses: actions/github-script@v7
@@ -211,7 +125,7 @@ jobs:
             });
 
   publish-success:
-    needs: [validate-version, build-and-push-images, build-and-push-chart]
+    needs: [validate-version, build-and-push-images]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -230,7 +144,7 @@ jobs:
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
           else
-            BASE_VERSION=$(grep '^version:' chart/Chart.yaml | awk '{print $2}')
+            BASE_VERSION=$(grep '^version =' backend/pyproject.toml | head -n 1 | awk -F'"' '{print $2}')
             VERSION="${BASE_VERSION}-dev.${{ github.run_number }}"
           fi
           echo "tag=${VERSION}" >> $GITHUB_OUTPUT
@@ -239,7 +153,6 @@ jobs:
         run: |
           OWNER="${{ steps.owner.outputs.name }}"
           TAG="${{ steps.version.outputs.tag }}"
-          CHART_NAME="helm-chart"
           
           echo "=================================================="
           echo "🎉 SUCCESS: All packages published successfully!"
@@ -248,13 +161,11 @@ jobs:
           echo "🚀 Artifacts published:"
           echo "   - Container Service:     ghcr.io/${OWNER}/objectlens/service:${TAG}"
           echo "   - Container Web UI:      ghcr.io/${OWNER}/objectlens/web-ui:${TAG}"
-          echo "   - Container MCP Server:  ghcr.io/${OWNER}/objectlens/mcp-server:${TAG}"
-          echo "   - Helm Chart OCI:        oci://ghcr.io/${OWNER}/objectlens/${CHART_NAME}:${TAG}"
           echo "=================================================="
 
   cleanup-on-failure:
-    needs: [validate-version, build-and-push-images, build-and-push-chart]
-    if: always() && (contains(needs.build-and-push-images.result, 'failure') || contains(needs.build-and-push-chart.result, 'failure') || contains(needs.build-and-push-images.result, 'cancelled') || contains(needs.build-and-push-chart.result, 'cancelled'))
+    needs: [validate-version, build-and-push-images]
+    if: always() && (contains(needs.build-and-push-images.result, 'failure') || contains(needs.build-and-push-images.result, 'cancelled'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -273,7 +184,7 @@ jobs:
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             VERSION="${GITHUB_REF_NAME#v}"
           else
-            BASE_VERSION=$(grep '^version:' chart/Chart.yaml | awk '{print $2}')
+            BASE_VERSION=$(grep '^version =' backend/pyproject.toml | head -n 1 | awk -F'"' '{print $2}')
             VERSION="${BASE_VERSION}-dev.${{ github.run_number }}"
           fi
           echo "tag=${VERSION}" >> $GITHUB_OUTPUT
@@ -317,15 +228,9 @@ jobs:
             fi
           }
           
-          CHART_NAME=$(grep '^name:' chart/Chart.yaml | awk '{print $2}')
           echo "Cleaning up possible failed release artifacts..."
           
           cleanup_package "objectlens/service" "${TAG}" "${OWNER}"
           cleanup_package "objectlens/web-ui" "${TAG}" "${OWNER}"
-          cleanup_package "objectlens/mcp-server" "${TAG}" "${OWNER}"
-          cleanup_package "objectlens/helm-chart" "${TAG}" "${OWNER}"
           cleanup_package "service" "${TAG}" "${OWNER}"
           cleanup_package "web-ui" "${TAG}" "${OWNER}"
-          cleanup_package "mcp-server" "${TAG}" "${OWNER}"
-          cleanup_package "helm-chart" "${TAG}" "${OWNER}"
-          cleanup_package "${CHART_NAME}" "${TAG}" "${OWNER}"
