@@ -1,0 +1,61 @@
+name: DCO Check
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dco-check:
+    name: Developer Certificate of Origin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history so we can check commits
+
+      - name: Verify DCO Sign-off
+        run: |
+          set -euo pipefail
+          
+          # Ensure target branch (main) is fetched
+          git fetch origin main --depth=1
+          
+          # Find all commits in PR branch compared to main (excluding merges)
+          commits=$(git rev-list --no-merges origin/main..HEAD)
+          
+          if [ -z "$commits" ]; then
+            echo "No commits to check."
+            exit 0
+          fi
+          
+          failed=0
+          for commit in $commits; do
+            author_name=$(git log -1 --format='%an' "$commit")
+            author_email=$(git log -1 --format='%ae' "$commit")
+            commit_subject=$(git log -1 --format='%s' "$commit")
+            commit_body=$(git log -1 --format='%B' "$commit")
+            
+            expected_signature="Signed-off-by: $author_name <$author_email>"
+            
+            if ! echo "$commit_body" | grep -Fq "$expected_signature"; then
+              echo "❌ Commit $commit ($commit_subject) is not signed off!"
+              echo "   Expected: $expected_signature"
+              failed=1
+            else
+              echo "✅ Commit $commit is signed off correctly."
+            fi
+          done
+          
+          if [ "$failed" -ne 0 ]; then
+            echo "❌ DCO Check Failed! Please sign-off all your commits."
+            echo "   You can sign-off your last commit using: git commit --amend --signoff"
+            exit 1
+          fi
+          
+          echo "🎉 All commits are signed off correctly!"
