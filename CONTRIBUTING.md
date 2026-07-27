@@ -4,7 +4,7 @@ Thank you for contributing to ObjectLens. To ensure legal compliance and maintai
 
 ## Developer Certificate of Origin (DCO)
 
-We require all commits to be signed off. By signing off your commits, you certify that you have the right to submit the code under the project's open-source license.
+We require all commits to be signed off. By signing off your commits, you certify that you have the right to submit the code under the project's open-source license. You can read the full text of the agreement in the [DCO](DCO) file.
 
 ### How to Sign Off Your Commits
 
