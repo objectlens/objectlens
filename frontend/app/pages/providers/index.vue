@@ -31,23 +31,48 @@ const reloading = ref(false);
 const search = ref("");
 const error = ref("");
 
+async function fetchProviderStatuses() {
+  // Initialize each non-error provider with a connecting state in parallel
+  for (const provider of providers.value) {
+    if (!provider.error) {
+      statuses.value[provider.id] = {
+        provider_id: provider.id,
+        status: "connecting",
+        can_list_buckets: false,
+        visible_bucket_count: 0,
+        message: "Checking connection..."
+      };
+    }
+  }
+
+  // Fetch status concurrently and non-blocking
+  providers.value.forEach(async (provider) => {
+    if (provider.error) return;
+    try {
+      const status = await api.providerStatus(provider.id);
+      statuses.value[provider.id] = status;
+      bucketCounts.value[provider.id] = status.visible_bucket_count;
+    } catch (err) {
+      statuses.value[provider.id] = {
+        provider_id: provider.id,
+        status: "offline",
+        can_list_buckets: false,
+        visible_bucket_count: 0,
+        message: err instanceof Error ? err.message : "Connection timed out"
+      };
+      bucketCounts.value[provider.id] = 0;
+    }
+  });
+}
+
 async function manualReload() {
   reloading.value = true;
   try {
     const updated = await api.reloadProviders();
     providers.value = updated;
-    // Clear and recalculate individual statuses
     statuses.value = {};
     bucketCounts.value = {};
-    for (const provider of providers.value) {
-      try {
-        const status = await api.providerStatus(provider.id);
-        statuses.value[provider.id] = status;
-        bucketCounts.value[provider.id] = status.visible_bucket_count;
-      } catch {
-        bucketCounts.value[provider.id] = 0;
-      }
-    }
+    await fetchProviderStatuses();
   } catch (err) {
     console.error("Manual configuration reload failed:", err);
   } finally {
@@ -72,8 +97,14 @@ const healthyCount = computed(() => {
   return Object.values(statuses.value).filter(s => s.status === "healthy").length;
 });
 
+const connectingCount = computed(() => {
+  return Object.values(statuses.value).filter(s => s.status === "connecting").length;
+});
+
 const unhealthyCount = computed(() => {
-  return providers.value.length - healthyCount.value;
+  const offlineCount = Object.values(statuses.value).filter(s => s.status === "offline" || s.status === "unhealthy").length;
+  const configErrorCount = providers.value.filter(p => p.error).length;
+  return offlineCount + configErrorCount;
 });
 
 const totalVisibleBuckets = computed(() => {
@@ -85,21 +116,13 @@ onMounted(async () => {
   error.value = "";
   try {
     providers.value = await api.listProviders();
-    for (const provider of providers.value) {
-      try {
-        const status = await api.providerStatus(provider.id);
-        statuses.value[provider.id] = status;
-        bucketCounts.value[provider.id] = status.visible_bucket_count;
-      } catch {
-        bucketCounts.value[provider.id] = 0;
-      }
-    }
+    loading.value = false;
+    await fetchProviderStatuses();
   } catch (err) {
     error.value =
       err instanceof Error
         ? err.message
         : "Failed to load provider connections. Check your API backend.";
-  } finally {
     loading.value = false;
   }
 });
@@ -177,10 +200,10 @@ cp example/providers/*.yaml backend/data/providers/</code></pre>
           </div>
           <div class="metric-content flex-wrap gap-6">
             <strong>{{ providers.length }}</strong>
-            <span class="metric-trend success">{{ healthyCount }} healthy</span>
-            <span class="metric-trend" :class="unhealthyCount > 0 ? 'danger' : ''">
-              {{ unhealthyCount }} unhealthy
-            </span>
+            <span class="metric-trend success" v-if="healthyCount > 0">{{ healthyCount }} healthy</span>
+            <span class="metric-trend warning" v-if="connectingCount > 0">{{ connectingCount }} connecting</span>
+            <span class="metric-trend danger" v-if="unhealthyCount > 0">{{ unhealthyCount }} offline</span>
+            <span class="metric-trend" v-if="healthyCount === 0 && connectingCount === 0 && unhealthyCount === 0">0 active</span>
           </div>
           <p class="metric-caption">Storage nodes active in <code>providers/</code> directory.</p>
         </article>
@@ -248,7 +271,7 @@ cp example/providers/*.yaml backend/data/providers/</code></pre>
             v-for="provider in filteredProviders"
             :key="provider.id"
             class="modern-provider-card provider-dashboard-card"
-            :class="[provider.error ? 'error-border' : (statuses[provider.id]?.status === 'healthy' ? 'healthy-border' : 'unhealthy-border')]"
+            :class="[provider.error ? 'error-border' : (!statuses[provider.id] || statuses[provider.id]?.status === 'connecting' ? 'connecting-border' : (statuses[provider.id]?.status === 'healthy' ? 'healthy-border' : 'unhealthy-border'))]"
           >
             <div class="card-top-row">
               <span class="provider-type-badge">{{ provider.type }}</span>
@@ -258,6 +281,13 @@ cp example/providers/*.yaml backend/data/providers/</code></pre>
               >
                 <span class="status-dot-indicator" />
                 <span>Config Error</span>
+              </span>
+              <span
+                v-else-if="!statuses[provider.id] || statuses[provider.id]?.status === 'connecting'"
+                class="provider-status-badge connecting"
+              >
+                <span class="status-dot-indicator spin-dot" />
+                <span>Connecting...</span>
               </span>
               <span
                 v-else
@@ -304,7 +334,12 @@ cp example/providers/*.yaml backend/data/providers/</code></pre>
                 </dl>
 
                 <p class="bucket-indicator">
-                  <strong>{{ bucketCounts[provider.id] ?? 0 }}</strong> buckets visible
+                  <span v-if="!statuses[provider.id] || statuses[provider.id]?.status === 'connecting'" class="connecting-text">
+                    Checking connection...
+                  </span>
+                  <span v-else>
+                    <strong>{{ bucketCounts[provider.id] ?? 0 }}</strong> buckets visible
+                  </span>
                 </p>
               </template>
             </div>
@@ -548,5 +583,45 @@ cp example/providers/*.yaml backend/data/providers/</code></pre>
 
 .gap-6 {
   gap: 6px;
+}
+
+/* Connecting State Styles */
+.provider-status-badge.connecting {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.provider-dashboard-card.connecting-border {
+  border-top-color: var(--warning) !important;
+}
+
+.provider-dashboard-card.connecting-border:hover {
+  border-top-color: var(--warning);
+}
+
+.metric-trend.warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.metric-trend.danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.connecting-text {
+  font-size: 13px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+@keyframes pulse-anim {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
+
+.spin-dot {
+  animation: pulse-anim 1.5s infinite ease-in-out;
 }
 </style>
