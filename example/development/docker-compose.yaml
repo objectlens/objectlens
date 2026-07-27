@@ -11,9 +11,11 @@ services:
       CEPH_S3_DEFAULT_BUCKET: objectlens-demo
       CEPH_S3_VERIFY_SSL: "false"
       OBJECTLENS_DATABASE_URL: sqlite:////data/objectlens.db
+      OBJECTLENS_PROVIDERS_CONFIG_DIR: /data/providers
+      OBJECTLENS_USERS_CONFIG_DIR: /data/users
       OBJECTLENS_CORS_ORIGINS: http://localhost:3000
     volumes:
-      - ./data:/data
+      - ./data/objectlens:/data
     ports:
       - "8000:8000"
     depends_on:
@@ -36,7 +38,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
-      - minio-data:/data
+      - ./data/minio:/data
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -61,12 +63,9 @@ services:
     command: /garage server
     volumes:
       - ../garage/garage.toml:/etc/garage.toml:ro
-      - garage-data:/var/lib/garage
+      - ./data/garage:/var/lib/garage
     ports:
       - "3900:3900"
       - "3901:3901"
       - "3902:3902"
 
-volumes:
-  minio-data:
-  garage-data:
