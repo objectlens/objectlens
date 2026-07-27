@@ -40,43 +40,8 @@ ObjectLens is a Kubernetes-native object storage interface for fast access to Ce
 - **Granular RBAC Enforcements**: Separates `viewer` (read-only list, search, download, preview) and `admin` (write, upload, recursive delete, move, scan) privileges.
 - **HTTP Basic Auth Integration**: Simple stateless S3 security configured dynamically on backend startup.
 
-### Model Context Protocol (MCP) Server
-- **Native LLM Integration**: Exposes storage connections, buckets, objects, and activity logs to any MCP-enabled AI client (like Claude Desktop, Cursor, or Gemini CLI) via stdio.
-- **Context-Aware Previews**: Allows LLMs to fetch metadata and preview object contents (supports up to 1MB of text, JSON, CSV, or code file contents) to quickly gather context.
-- **Indexed Metadata Search**: Enables LLMs to run fast search queries against local SQLite metadata indexes.
-- **On-Demand S3 Sync**: Allows LLMs to trigger S3 bucket indexing to sync metadata dynamically.
-
 ### Interface
 - **Dynamic Theming**: Easily switch between light, dark, and system-matched theme modes.
-
----
-
-## Deployment via Helm (Recommended)
-
-Deploy ObjectLens into your Kubernetes cluster using the published Helm chart from GitHub Container Registry (GHCR):
-
-```bash
-helm upgrade --install objectlens oci://ghcr.io/kubehive-io/objectlens/helm-chart \
-  --version 0.1.0 \
-  --namespace objectlens \
-  --create-namespace
-```
-
-### Configuration Overrides
-
-You can customize your deployment (including your Ceph S3 endpoints, credentials, persistence, and ingress) by passing parameters during installation or updating `values.yaml`:
-
-```bash
-helm upgrade --install objectlens oci://ghcr.io/kubehive-io/objectlens/helm-chart \
-  --version 0.1.0 \
-  --namespace objectlens \
-  --create-namespace \
-  --set backend.env.CEPH_S3_ENDPOINT_URL="https://your-ceph-rgw:9000" \
-  --set backend.env.CEPH_S3_ACCESS_KEY_ID="your-access-key" \
-  --set backend.env.CEPH_S3_SECRET_ACCESS_KEY="your-secret-key"
-```
-
-For more configuration settings, refer to [values.yaml](chart/values.yaml) and the **S3 Connection Settings** guide in our documentation.
 
 ---
 

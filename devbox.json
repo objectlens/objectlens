@@ -7,13 +7,10 @@
     "git",
     "jq",
     "curl",
-    "python312Packages.mkdocs-material",
     "docker",
     "kubectl",
-    "kubernetes-helm",
     "k9s",
-    "python312@latest",
-    "mkdocs@latest"
+    "python312@latest"
   ],
   "shell": {
     "init_hook": [
@@ -24,8 +21,6 @@
       "backend":    "just backend",
       "frontend":   "just frontend",
       "dev":        "just dev",
-      "docs":       "just docs",
-      "docs-build": "just docs-build",
       "lint":       "just lint",
       "format":     "just format",
       "test":       "just test"
