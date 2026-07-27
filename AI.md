@@ -89,3 +89,9 @@ just test          # Run backend unit and integration tests
 ### 3. Writing Prose & Comments
 - **No Filler**: Write direct, human-like, non-slop documentation. State what the code does or why a change was made without preambles or generic boilerplate.
 - **Maintain the README Features List**: Always add new features to the features list in `README.md` when implementing them, or update them when modified. This ensures developers and users can easily see the software's capabilities and stay informed about additions or changes.
+
+### 4. Commits & DCO Sign-off
+- **DCO Sign-off Required**: Every commit must be signed off to comply with the Developer Certificate of Origin (DCO). Use the `-s` or `--signoff` flag when committing:
+  ```bash
+  git commit -s -m "Your commit message"
+  ```
