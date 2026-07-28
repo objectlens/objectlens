@@ -48,12 +48,19 @@ export type ProviderConnection = {
   error?: string | null;
 };
 
+export type ProviderCapabilityCheck = {
+  name: string;
+  status: "healthy" | "unhealthy" | "warning" | "skipped" | "not_run";
+  message?: string | null;
+};
+
 export type ProviderStatus = {
   provider_id: string;
   status: string;
   can_list_buckets: boolean;
   visible_bucket_count: number;
   message: string;
+  capabilities?: ProviderCapabilityCheck[];
 };
 
 export type ProviderSettings = {
@@ -223,11 +230,11 @@ export function useObjectLensApi() {
     }
 
     try {
-      return await $fetch<T>(path, {
+      return (await $fetch<T>(path, {
         baseURL: baseUrl,
         ...options,
         headers,
-      });
+      })) as T;
     } catch (error) {
       const fetchError = error as { status?: number; data?: { detail?: string }; message?: string };
       if (fetchError.status === 401) {
@@ -267,8 +274,11 @@ export function useObjectLensApi() {
       request<ProviderConnection[]>("/providers/reload", { method: "POST" }),
     providerConnection: (providerId: string) =>
       request<ProviderConnection>(`/providers/${encodeURIComponent(providerId)}`),
-    providerStatus: (providerId: string) =>
-      request<ProviderStatus>(`/providers/${encodeURIComponent(providerId)}/status`),
+    providerStatus: (providerId: string, run?: "simple" | "deep") =>
+      request<ProviderStatus>(
+        `/providers/${encodeURIComponent(providerId)}/status`,
+        run !== undefined ? { query: { run } } : undefined
+      ),
     providerSettings: (providerId: string) =>
       request<ProviderSettings>(`/providers/${encodeURIComponent(providerId)}/settings`),
     listBuckets: () => request<{ buckets: Bucket[] }>("/buckets"),

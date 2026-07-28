@@ -79,14 +79,18 @@ onMounted(async () => {
         </div>
         <p class="subtitle">{{ provider?.description || `${provider?.display_name || 'Storage Endpoint'} · ${provider?.region || 'us-east-1'}` }}</p>
       </div>
-      <div class="header-actions">
-        <NuxtLink class="btn btn-secondary flex-center" :to="`/providers/${encodeURIComponent(providerId)}/details`">
+      <div class="header-actions flex-wrap gap-8">
+        <NuxtLink class="btn btn-secondary flex-center gap-6" :to="`/providers/${encodeURIComponent(providerId)}/details`">
           <Info :size="14" />
           <span>Details</span>
         </NuxtLink>
-        <NuxtLink class="btn btn-secondary flex-center" :to="`/providers/${encodeURIComponent(providerId)}/details#settings`">
+        <NuxtLink class="btn btn-secondary flex-center gap-6" :to="`/providers/${encodeURIComponent(providerId)}/details#settings`">
           <Settings :size="14" />
           <span>Settings</span>
+        </NuxtLink>
+        <NuxtLink class="btn btn-secondary flex-center gap-6" :to="`/providers/${encodeURIComponent(providerId)}/diagnostics`">
+          <Activity :size="14" />
+          <span>Diagnostics Audit</span>
         </NuxtLink>
       </div>
     </header>

@@ -34,6 +34,8 @@ ObjectLens is a Kubernetes-native object storage interface for fast access to Ce
 ### Operations & Audit Logs
 - **DB-Backed Auditing**: Real, persistent SQLite `activity_log` tracking of bucket indexing, file uploads, file deletions, and prefix directory deletions.
 - **Operations Timeline**: Beautiful paginated audit log timeline supporting default 50-event pages and relative, human-friendly date formatting.
+- **Comprehensive Diagnostic Auditing**: Multi-step capability and permission verification suite (endpoint connectivity, List Buckets, List Objects, Upload, and Delete operations) running automatically for S3-compatible storage providers.
+- **Dedicated Health Status Endpoints**: Standardized health-check API endpoints (`/health`) on both the Nuxt frontend server and FastAPI backend for active status validation.
 
 ### Security & Access Control
 - **Declarative YAML Authentication**: Deploy role permissions by placing clean user manifests (e.g. `data/users/admin.yaml`) with passwords.

@@ -65,43 +65,10 @@ function toggleSidebar() {
   isCollapsed.value = !isCollapsed.value;
 }
 
-const themeMode = ref<"light" | "dark" | "auto">("auto");
-let darkModeQuery: MediaQueryList | null = null;
-
-function resolvedTheme(mode: typeof themeMode.value) {
-  if (mode !== "auto") return mode;
-  if (typeof window === "undefined") return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-}
-
-function applyTheme(mode: typeof themeMode.value) {
-  if (typeof document === "undefined") return;
-  document.documentElement.dataset.theme = resolvedTheme(mode);
-  document.documentElement.dataset.themeMode = mode;
-  localStorage.setItem("objectlens-theme", mode);
-}
-
-function setTheme(mode: typeof themeMode.value) {
-  themeMode.value = mode;
-  applyTheme(mode);
-}
-
 function handleLogout() {
   api.logout();
   window.location.reload();
 }
-
-onMounted(() => {
-  const stored = localStorage.getItem("objectlens-theme") as typeof themeMode.value | null;
-  if (stored === "light" || stored === "dark" || stored === "auto") {
-    themeMode.value = stored;
-  }
-  darkModeQuery = window.matchMedia("(prefers-color-scheme: dark)");
-  darkModeQuery.addEventListener("change", () => {
-    if (themeMode.value === "auto") applyTheme("auto");
-  });
-  applyTheme(themeMode.value);
-});
 </script>
 
 <template>
@@ -167,26 +134,6 @@ onMounted(() => {
             {{ p.name }}
           </option>
         </select>
-      </div>
-
-      <!-- Theme Select Hover Dropdown -->
-      <div class="theme-menu-container">
-        <button class="theme-menu-current" type="button" data-tooltip="Theme Mode">
-          <span v-if="themeMode === 'light'"><Sun :size="16" /><span v-if="!isCollapsed"> Light</span></span>
-          <span v-else-if="themeMode === 'dark'"><Moon :size="16" /><span v-if="!isCollapsed"> Dark</span></span>
-          <span v-else-if="themeMode === 'auto'"><Laptop :size="16" /><span v-if="!isCollapsed"> Auto</span></span>
-        </button>
-        <div class="theme-menu-dropdown">
-          <button :class="{ active: themeMode === 'light' }" type="button" @click="setTheme('light')">
-            <Sun :size="14" /> Light
-          </button>
-          <button :class="{ active: themeMode === 'dark' }" type="button" @click="setTheme('dark')">
-            <Moon :size="14" /> Dark
-          </button>
-          <button :class="{ active: themeMode === 'auto' }" type="button" @click="setTheme('auto')">
-            <Laptop :size="14" /> Auto
-          </button>
-        </div>
       </div>
 
       <!-- User Info & Version -->
