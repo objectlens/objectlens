@@ -215,12 +215,19 @@ class ProviderResponse(BaseModel):
     default_bucket: str | None = None
 
 
+class ProviderCapabilityCheck(BaseModel):
+    name: str
+    status: str  # "healthy", "unhealthy", "warning", "skipped", "not_run"
+    message: str | None = None
+
+
 class ProviderStatusResponse(BaseModel):
     provider_id: str
     status: str
     can_list_buckets: bool
     visible_bucket_count: int = 0
     message: str
+    capabilities: list[ProviderCapabilityCheck] = Field(default_factory=list)
 
 
 class ProviderSettingsResponse(BaseModel):
